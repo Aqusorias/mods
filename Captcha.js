@@ -38,9 +38,8 @@ module.exports = {
             <label for="imagetextcolorpicker" style="text-decoration: line-through; color: gray;">Captcha text color</label>
             <h6 style="color: gray;"></h6>
         
-            <label for="opacityrange">Captcha text opacity</label>
-            <input onchange="document.getElementById('opacitypercantage').innerHTML = this.value + '%'" style="margin-top: 15px;" type="range" name="opacityrange" id="opacityrange" step="5" min="0" max="100">
-            <label id="opacitypercantage" for="opacityrange">%</label>
+            <label for="opacityrange" style="text-decoration: line-through; color: gray;">Captcha text opacity</label>
+            <h6 style="color: gray;"></h6>
         
             <h4 style="margin-top: 10px;">Line</h4>
         
@@ -316,11 +315,14 @@ module.exports = {
                 code = "defaultcode";
         }
 
+        console.log(code);
+
         const captcha = new CaptchaGenerator();
         captcha.async = true;
         captcha.setDecoy({
             opacity: parseInt(action.decoyopacityrange) / 100,
         });
+        captcha.setCaptcha({ text: code });
 
         const buffer = await captcha.generate();
         fs.writeFileSync("captcha.png", buffer);
@@ -360,45 +362,45 @@ module.exports = {
             default:
         }
 
-var channel;
-if (action.msgtype == "Message") {
-    if (action.messagechannel.trim() == "{commandchannel}") {
-        channel = message.channel;
-    } else {
-        channel = await message.guild.channels.cache.find(channel => channel.id === action.messagechannel);
-    }
-} else {
-    if (action.embedchannel.trim() == "{commandchannel}") {
-        channel = message.channel;
-    } else {
-        channel = await message.guild.channels.cache.find(channel => channel.id === action.embedchannel);
-    }
-}
-
-const filter = msg => msg.author.id === message.author.id;
-channel.awaitMessages({
-    filter,
-    time: parseInt(DBS.BetterMods.parseAction(action.aumtime, message)) * 1000,
-    max: 1
-})
-    .then(msg => {
-        DBS.BetterMods.saveVar("temp", action.aumuser, msg.first().author, message.guild);
-        DBS.BetterMods.saveVar("temp", action.aumch, message.channel, message.guild);
-        if (msg.first().content === code) { // Compare with generated `code`
-            DBS.BetterMods.saveVar("temp", "captcha", "true", message.guild);
-            DBS.callNextAction(command, message, args, index + 1);
+        var channel;
+        if (action.msgtype == "Message") {
+            if (action.messagechannel.trim() == "{commandchannel}") {
+                channel = message.channel;
+            } else {
+                channel = await message.guild.channels.cache.find(channel => channel.id === action.messagechannel);
+            }
         } else {
-            DBS.BetterMods.saveVar("temp", "captcha", "false", message.guild);
-            DBS.callNextAction(command, message, args, index + 1);
+            if (action.embedchannel.trim() == "{commandchannel}") {
+                channel = message.channel;
+            } else {
+                channel = await message.guild.channels.cache.find(channel => channel.id === action.embedchannel);
+            }
         }
-    })
-    .catch(error => {
-        DBS.logError({
-            level: 'error',
-            message: '[Captcha (AwaitUserMessage)] ' + error,
-        });
-        DBS.BetterMods.saveVar("temp", "captcha", "false", message.guild);
-        DBS.callNextAction(command, message, args, index + 1);
-    });
-    }
+
+        const filter = msg => msg.author.id === message.author.id;
+        channel.awaitMessages({
+            filter,
+            time: parseInt(DBS.BetterMods.parseAction(action.aumtime, message)) * 1000,
+            max: 1
+        })
+            .then(msg => {
+                DBS.BetterMods.saveVar("temp", action.aumuser, msg.first().author, message.guild);
+                DBS.BetterMods.saveVar("temp", action.aumch, message.channel, message.guild);
+                if (msg.first().content === code) { // Compare with generated `code`
+                    DBS.BetterMods.saveVar("temp", "captcha", "true", message.guild);
+                    DBS.callNextAction(command, message, args, index + 1);
+                } else {
+                    DBS.BetterMods.saveVar("temp", "captcha", "false", message.guild);
+                    DBS.callNextAction(command, message, args, index + 1);
+                }
+            })
+            .catch(error => {
+                DBS.logError({
+                    level: 'error',
+                    message: '[Captcha (AwaitUserMessage)] ' + error,
+                });
+                DBS.BetterMods.saveVar("temp", "captcha", "false", message.guild);
+                DBS.callNextAction(command, message, args, index + 1);
+            });
+        }
 };
